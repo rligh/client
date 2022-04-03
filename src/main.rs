@@ -1,6 +1,8 @@
 use std::{
     io::{self, stdin, Read, Write},
     net::{Shutdown, TcpStream},
+    sync::mpsc::{self, TryRecvError},
+    thread,
 };
 
 use encoding_rs::GBK;
@@ -35,6 +37,54 @@ fn main() {
 
         // Request message history
         write_all_gbk(&mut stream, "历史信息☆★☆获取");
+
+        // Avoid blocking when retrieving message history and checking for new messages
+        stream
+            .set_nonblocking(true)
+            .expect("Failed to set stream to nonblocking");
+
+        // Create a channel and a thread for reading stdin
+        let (input_sender, input_receiver) = mpsc::channel::<String>();
+
+        thread::spawn(move || loop {
+            let mut buf = String::new();
+            io::stdin().read_line(&mut buf).expect("Failed to read");
+            input_sender.send(buf).expect("Failed to send");
+        });
+
+        const MSG_PREFIX: &str = "消息☆★☆";
+        let mut history = true;
+
+        loop {
+            match input_receiver.try_recv() {
+                Ok(msg) => {
+                    let msg = msg.trim();
+                    if msg == "#quit" {
+                        break;
+                    }
+                    // TODO: Correct machine ID
+                    write_all_gbk(
+                        &mut stream,
+                        &format!("新消息☆★☆{username}[ID:{id}]：☆★☆{msg}☆★☆{id}☆★☆1234567"),
+                    );
+                }
+                Err(TryRecvError::Empty) => match read_gbk(&mut stream) {
+                    Ok(data) => {
+                        if data.starts_with(MSG_PREFIX) {
+                            history = false;
+                            print!("{}", &data[MSG_PREFIX.len()..]);
+                        } else {
+                            // Note that this is different from normal messages,
+                            // in that it is not prefixed.
+                            assert!(history);
+                            print!("{}", data);
+                        }
+                    }
+                    Err(err) => assert!(err.kind() == io::ErrorKind::WouldBlock),
+                },
+                Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
+            }
+        }
 
         // Log out
         write_all_gbk(&mut stream, &format!("下线★☆★{id}"));
