@@ -55,10 +55,8 @@ jobs:
       - name: Build release
         run: cargo build --release --target ${{ matrix.job.target }}
 
-      - run: find .
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.job.target }}
-          path: target/release/client(.exe)?
+          path: target/${{ matrix.job.target }}/release/client(.exe)?
