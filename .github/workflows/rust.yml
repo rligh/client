@@ -55,14 +55,10 @@ jobs:
       - name: Build release
         run: cargo build --release --target ${{ matrix.job.target }}
 
-      - run: echo "artifactPath=target/${{ matrix.job.target }}/release/client.exe" >> $GITHUB_ENV
-        if: ${{ contains( matrix.job.target, 'windows' ) }}
-
-      - run: echo "artifactPath=target/${{ matrix.job.target }}/release/client" >> $GITHUB_ENV
-        if: ${{ !contains( matrix.job.target, 'windows' ) }}
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.job.target }}
-          path: ${{ env.artifactPath }}
+          path: |
+            target/${{ matrix.job.target }}/release/client
+            target/${{ matrix.job.target }}/release/client.exe
