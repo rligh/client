@@ -17,6 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Rustup update
+        run: rustup update
+
       - name: Build
         run: cargo build --verbose
 
@@ -51,6 +54,8 @@ jobs:
 
       - name: Build release
         run: cargo build --release --target ${{ matrix.job.target }}
+
+      - run: find .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
