@@ -59,7 +59,7 @@ jobs:
         if: ${{ contains( matrix.job.target, 'windows' ) }}
 
       - run: echo "artifactPath=target/${{ matrix.job.target }}/release/client" >> $GITHUB_ENV
-        if: ${{ contains( !matrix.job.target, 'windows' ) }}
+        if: ${{ !contains( matrix.job.target, 'windows' ) }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
