@@ -23,10 +23,19 @@ fn main() {
 
     // Log in
     write_all_gbk(&mut stream, &format!("登录☆★☆{id}☆★☆{password}"));
-    let username = read_gbk(&mut stream).expect("Failed to read username");
+    let res = read_gbk(&mut stream).expect("Failed to read username");
+    if res == "错误☆★☆-1" {
+        println!("ID或密码错误！");
+        return;
+    } else {
+        const LOGIN_PREFIX: &str = "登录☆★☆";
+        assert!(res.starts_with(LOGIN_PREFIX));
+        let id = &res[LOGIN_PREFIX.len()..];
 
-    // Log out
-    write_all_gbk(&mut stream, &format!("下线★☆★{id}"));
+        // Log out
+        write_all_gbk(&mut stream, &format!("下线★☆★{id}"));
+    }
+
     stream.shutdown(Shutdown::Both).expect("Failed to shutdown");
 }
 
