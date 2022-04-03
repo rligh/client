@@ -30,7 +30,11 @@ fn main() {
     } else {
         const LOGIN_PREFIX: &str = "登录☆★☆";
         assert!(res.starts_with(LOGIN_PREFIX));
-        let id = &res[LOGIN_PREFIX.len()..];
+        let username = &res[LOGIN_PREFIX.len()..];
+        println!("{}，欢迎！", username);
+
+        // Request message history
+        write_all_gbk(&mut stream, "历史信息☆★☆获取");
 
         // Log out
         write_all_gbk(&mut stream, &format!("下线★☆★{id}"));
