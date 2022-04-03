@@ -47,13 +47,13 @@ jobs:
         run: rustup update
 
       - name: Set up toolchain
-        run: rustup target add ${{ matrix.target }}
+        run: rustup target add ${{ matrix.job.target }}
 
       - name: Build release
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.job.target }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: matrix.target
+          name: ${{ matrix.job.target }}
           path: target/release/client(.exe)?
