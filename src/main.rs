@@ -59,6 +59,7 @@ fn main() {
         });
 
         const MSG_PREFIX: &str = "消息☆★☆";
+        let mut info_requested = 0;
 
         loop {
             match input_receiver.try_recv() {
@@ -66,6 +67,8 @@ fn main() {
                     let msg = msg.trim();
                     if msg == "#quit" {
                         break;
+                    } else if msg == "#info" {
+                        info_requested = 3;
                     }
                     // TODO: Correct machine ID
                     write_all_gbk(
@@ -75,8 +78,13 @@ fn main() {
                 }
                 Err(TryRecvError::Empty) => match read_gbk(&mut stream) {
                     Ok(data) => {
-                        assert!(data.starts_with(MSG_PREFIX));
-                        print!("{}", &data[MSG_PREFIX.len()..]);
+                        if info_requested > 0 {
+                            info_requested -= 1;
+                            print!("{}", data);
+                        } else {
+                            assert!(data.starts_with(MSG_PREFIX));
+                            print!("{}", &data[MSG_PREFIX.len()..]);
+                        }
                     }
                     Err(err) => assert!(err.kind() == io::ErrorKind::WouldBlock),
                 },
