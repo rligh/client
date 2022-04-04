@@ -38,7 +38,13 @@ fn main() {
         // Request message history
         write_all_gbk(&mut stream, "历史信息☆★☆获取");
 
-        // Avoid blocking when retrieving message history and checking for new messages
+        // Retrieve message history
+        print!(
+            "{}",
+            read_history(&mut stream).expect("Failed to read history")
+        );
+
+        // Avoid blocking when checking for new messages
         stream
             .set_nonblocking(true)
             .expect("Failed to set stream to nonblocking");
@@ -53,7 +59,6 @@ fn main() {
         });
 
         const MSG_PREFIX: &str = "消息☆★☆";
-        let mut history = true;
 
         loop {
             match input_receiver.try_recv() {
@@ -70,15 +75,8 @@ fn main() {
                 }
                 Err(TryRecvError::Empty) => match read_gbk(&mut stream) {
                     Ok(data) => {
-                        if data.starts_with(MSG_PREFIX) {
-                            history = false;
-                            print!("{}", &data[MSG_PREFIX.len()..]);
-                        } else {
-                            // Note that this is different from normal messages,
-                            // in that it is not prefixed.
-                            assert!(history);
-                            print!("{}", data);
-                        }
+                        assert!(data.starts_with(MSG_PREFIX));
+                        print!("{}", &data[MSG_PREFIX.len()..]);
                     }
                     Err(err) => assert!(err.kind() == io::ErrorKind::WouldBlock),
                 },
@@ -112,5 +110,43 @@ fn read_gbk(stream: &mut TcpStream) -> io::Result<String> {
             Ok(cow.to_string())
         }
         Err(err) => Err(err),
+    }
+}
+
+fn read_history(stream: &mut TcpStream) -> io::Result<String> {
+    let mut data: Vec<u8> = vec![];
+    // #info is recognised by the server and is never sent out as messages,
+    // so it's used here as a indicator for end of message history
+    // TODO: Define a proper structure for message history in message protocol
+    loop {
+        let mut buf = [0u8; 4096];
+        let size: usize;
+        match stream.read(&mut buf) {
+            Ok(len) => size = len,
+            Err(err) => return Err(err),
+        }
+        data.append(&mut buf[0..size].to_vec());
+        if contains(&buf[0..size], "#info".as_bytes()) {
+            break;
+        }
+    }
+
+    let (cow, encoding_used, had_errors) = GBK.decode(&data[..]);
+    assert_eq!(encoding_used, GBK);
+    assert!(!had_errors);
+    Ok(cow.to_string())
+}
+
+fn contains(haystack: &[u8], needle: &[u8]) -> bool {
+    // TODO: better approach?
+    if haystack.len() < needle.len() {
+        false
+    } else {
+        for i in 0..haystack.len() - needle.len() + 1 {
+            if &haystack[i..i + needle.len()] == needle {
+                return true;
+            }
+        }
+        false
     }
 }
