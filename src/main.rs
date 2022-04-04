@@ -69,12 +69,13 @@ fn main() {
                         break;
                     } else if msg == "#info" {
                         info_requested = 3;
+                    } else if !msg.is_empty() {
+                        // TODO: Correct machine ID
+                        write_all_gbk(
+                            &mut stream,
+                            &format!("新消息☆★☆{username}[ID:{id}]：☆★☆{msg}☆★☆{id}☆★☆1234567"),
+                        );
                     }
-                    // TODO: Correct machine ID
-                    write_all_gbk(
-                        &mut stream,
-                        &format!("新消息☆★☆{username}[ID:{id}]：☆★☆{msg}☆★☆{id}☆★☆1234567"),
-                    );
                 }
                 Err(TryRecvError::Empty) => match read_gbk(&mut stream) {
                     Ok(data) => {
