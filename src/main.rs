@@ -28,75 +28,76 @@ fn main() {
     let res = read_gbk(&mut stream).expect("Failed to read username");
     if res == "错误☆★☆-1" {
         println!("ID或密码错误！");
+        stream.shutdown(Shutdown::Both).expect("Failed to shutdown");
         return;
-    } else {
-        const LOGIN_PREFIX: &str = "登录☆★☆";
-        assert!(res.starts_with(LOGIN_PREFIX));
-        let username = &res[LOGIN_PREFIX.len()..];
-        println!("{}，欢迎！", username);
+    }
 
-        // Request message history
-        write_all_gbk(&mut stream, "历史信息☆★☆获取");
+    const LOGIN_PREFIX: &str = "登录☆★☆";
+    assert!(res.starts_with(LOGIN_PREFIX));
+    let username = &res[LOGIN_PREFIX.len()..];
+    println!("{}，欢迎！", username);
 
-        // Retrieve message history
-        print!(
-            "{}",
-            read_history(&mut stream).expect("Failed to read history")
-        );
+    // Request message history
+    write_all_gbk(&mut stream, "历史信息☆★☆获取");
 
-        // Avoid blocking when checking for new messages
-        stream
-            .set_nonblocking(true)
-            .expect("Failed to set stream to nonblocking");
+    // Retrieve message history
+    print!(
+        "{}",
+        read_history(&mut stream).expect("Failed to read history")
+    );
 
-        // Create a channel and a thread for reading stdin
-        let (input_sender, input_receiver) = mpsc::channel::<String>();
+    // Avoid blocking when checking for new messages
+    stream
+        .set_nonblocking(true)
+        .expect("Failed to set stream to nonblocking");
 
-        thread::spawn(move || loop {
-            let mut buf = String::new();
-            io::stdin().read_line(&mut buf).expect("Failed to read");
-            input_sender.send(buf).expect("Failed to send");
-        });
+    // Create a channel and a thread for reading stdin
+    let (input_sender, input_receiver) = mpsc::channel::<String>();
 
-        const MSG_PREFIX: &str = "消息☆★☆";
-        let mut special = false;
+    thread::spawn(move || loop {
+        let mut buf = String::new();
+        io::stdin().read_line(&mut buf).expect("Failed to read");
+        input_sender.send(buf).expect("Failed to send");
+    });
 
-        loop {
-            match input_receiver.try_recv() {
-                Ok(msg) => {
-                    let msg = msg.trim();
-                    if msg == "#quit" {
-                        break;
-                    } else if msg == "#info" {
-                        special = true;
-                    }
-                    if !msg.is_empty() {
-                        // TODO: Correct machine ID
-                        write_all_gbk(
-                            &mut stream,
-                            &format!("新消息☆★☆{username}[ID:{id}]：☆★☆{msg}☆★☆{id}☆★☆1234567"),
-                        );
+    const MSG_PREFIX: &str = "消息☆★☆";
+    let mut special = false;
+
+    loop {
+        match input_receiver.try_recv() {
+            Ok(msg) => {
+                let msg = msg.trim();
+                if msg == "#quit" {
+                    break;
+                } else if msg == "#info" {
+                    special = true;
+                }
+                if !msg.is_empty() {
+                    // TODO: Correct machine ID
+                    write_all_gbk(
+                        &mut stream,
+                        &format!("新消息☆★☆{username}[ID:{id}]：☆★☆{msg}☆★☆{id}☆★☆1234567"),
+                    );
+                }
+            }
+            Err(TryRecvError::Empty) => match read_gbk(&mut stream) {
+                Ok(data) => {
+                    if data.starts_with(MSG_PREFIX) {
+                        special = false;
+                        print!("{}", &data[MSG_PREFIX.len()..]);
+                    } else {
+                        assert!(special);
+                        print!("{}", data);
                     }
                 }
-                Err(TryRecvError::Empty) => match read_gbk(&mut stream) {
-                    Ok(data) => {
-                        if data.starts_with(MSG_PREFIX) {
-                            special = false;
-                            print!("{}", &data[MSG_PREFIX.len()..]);
-                        } else {
-                            assert!(special);
-                            print!("{}", data);
-                        }
-                    }
-                    Err(err) => assert!(err.kind() == io::ErrorKind::WouldBlock),
-                },
-                Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
-            }
+                Err(err) => assert!(err.kind() == io::ErrorKind::WouldBlock),
+            },
+            Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
         }
-
-        // Log out
-        write_all_gbk(&mut stream, &format!("下线★☆★{id}"));
     }
+
+    // Log out
+    write_all_gbk(&mut stream, &format!("下线★☆★{id}"));
 
     stream.shutdown(Shutdown::Both).expect("Failed to shutdown");
 }
