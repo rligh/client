@@ -1,7 +1,7 @@
 # client
 [![Build Status](https://github.com/rligh/client/actions/workflows/rust.yml/badge.svg)](https://github.com/rligh/client/actions)
 
-A client for a chat server. Send feedback in QQ group 632614113.
+A client for a chat server. Get other clients created by different people in QQ group 632614113.
 
 ## Installation
 
@@ -13,6 +13,11 @@ git clone https://github.com/rligh/client.git
 cd client
 cargo build
 ```
+
+## TODO
+
+- Registration
+- Retrieve password
 
 ## License
 
