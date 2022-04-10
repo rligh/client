@@ -3,6 +3,7 @@ use std::{
     net::{Shutdown, TcpStream},
     sync::mpsc::{self, TryRecvError},
     thread,
+    time::Duration,
 };
 
 use encoding_rs::GBK;
@@ -125,39 +126,26 @@ fn read_gbk(stream: &mut TcpStream) -> io::Result<String> {
 }
 
 fn read_history(stream: &mut TcpStream) -> io::Result<String> {
-    let mut data: Vec<u8> = vec![];
-    // #info is recognised by the server and is never sent out as messages,
-    // so it's used here as a indicator for end of message history
     // TODO: Define a proper structure for message history in message protocol
+    let mut data: Vec<u8> = vec![];
+    stream
+        .set_read_timeout(Some(Duration::from_millis(500)))
+        .expect("Failed to set read timeout");
     loop {
         let mut buf = [0u8; 4096];
-        let size: usize;
+        let size;
         match stream.read(&mut buf) {
             Ok(len) => size = len,
-            Err(err) => return Err(err),
+            Err(err) => match err.kind() {
+                io::ErrorKind::WouldBlock => break,
+                _ => return Err(err),
+            },
         }
         data.append(&mut buf[0..size].to_vec());
-        if contains(&buf[0..size], "#info".as_bytes()) {
-            break;
-        }
     }
 
     let (cow, encoding_used, had_errors) = GBK.decode(&data[..]);
     assert_eq!(encoding_used, GBK);
     assert!(!had_errors);
     Ok(cow.to_string())
-}
-
-fn contains(haystack: &[u8], needle: &[u8]) -> bool {
-    // TODO: better approach?
-    if haystack.len() < needle.len() {
-        false
-    } else {
-        for i in 0..haystack.len() - needle.len() + 1 {
-            if &haystack[i..i + needle.len()] == needle {
-                return true;
-            }
-        }
-        false
-    }
 }
